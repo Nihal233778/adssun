@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Telegram Tap Game</title>
+    <!-- Importing Telegram WebApp Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #17212b; /* Telegram Dark Theme Background */
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none; /* Prevent text selection */
+        }
+
+        .header {
+            position: absolute;
+            top: 20px;
+            display: flex;
+            justify-content: space-between;
+            width: 80%;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .game-area {
+            position: relative;
+            width: 90vw;
+            height: 60vh;
+            background-color: #232e3c;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .target {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #2ea6ff, #0078d7);
+            border-radius: 50%;
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 0 20px #2ea6ff;
+            transition: transform 0.1s ease;
+        }
+
+        .target:active {
+            transform: scale(0.9);
+        }
+
+        .btn {
+            margin-top: 30px;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background-color: #2ea6ff;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(46, 166, 255, 0.4);
+        }
+
+        .btn:active {
+            background-color: #1c8ce6;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Telegram WebApp Initialization -->
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Make the app full screen
+        tg.setHeaderColor('#17212b');
+        tg.setBackgroundColor('#17212b');
+    </script>
+
+    <div class="header">
+        <div>Score: <span id="score">0</span></div>
+        <div>Time: <span id="time">10</span>s</div>
+    </div>
+
+    <div class="game-area" id="gameArea">
+        <div class="target hidden" id="target"></div>
+    </div>
+
+    <button class="btn" id="startBtn">Start Game</button>
+
+    <script>
+        const target = document.getElementById('target');
+        const gameArea = document.getElementById('gameArea');
+        const scoreEl = document.getElementById('score');
+        const timeEl = document.getElementById('time');
+        const startBtn = document.getElementById('startBtn');
+
+        let score = 0;
+        let timeLeft = 10;
+        let gameInterval;
+        let isPlaying = false;
+
+        function moveTarget() {
+            const areaRect = gameArea.getBoundingClientRect();
+            const targetSize = 80; // Matches CSS
+            
+            // Calculate random position within the game area
+            const maxX = areaRect.width - targetSize;
+            const maxY = areaRect.height - targetSize;
+
+            const randomX = Math.floor(Math.random() * maxX);
+            const randomY = Math.floor(Math.random() * maxY);
+
+            target.style.left = `${randomX}px`;
+            target.style.top = `${randomY}px`;
+        }
+
+        function handleTargetClick() {
+            if (!isPlaying) return;
+            
+            score++;
+            scoreEl.innerText = score;
+            
+            // Telegram Haptic Feedback
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+
+            moveTarget();
+        }
+
+        function startGame() {
+            score = 0;
+            timeLeft = 10;
+            isPlaying = true;
+            scoreEl.innerText = score;
+            timeEl.innerText = timeLeft;
+            
+            startBtn.style.display = 'none';
+            target.classList.remove('hidden');
+            
+            moveTarget();
+
+            gameInterval = setInterval(() => {
+                timeLeft--;
+                timeEl.innerText = timeLeft;
+
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            isPlaying = false;
+            clearInterval(gameInterval);
+            target.classList.add('hidden');
+            
+            startBtn.innerText = `Play Again (Score: ${score})`;
+            startBtn.style.display = 'block';
+
+            // Telegram Haptic Feedback for game over
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.notificationOccurred('warning');
+            }
+        }
+
+        // Event Listeners
+        target.addEventListener('pointerdown', handleTargetClick);
+        startBtn.addEventListener('click', startGame);
+
+    </script>
+</body>
+</html>
