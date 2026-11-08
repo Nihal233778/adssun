@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Target Tapper</title>
+    <title>Target Tapper · TeleAds</title>
     
     <!-- Telegram WebApp Script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
     <!-- ========================================== -->
-    <!-- PASTE YOUR ADSUN SDK SCRIPT HERE (IF ANY)  -->
+    <!-- TELEADS SDK (REWARDED & INTERSTITIAL)      -->
     <!-- ========================================== -->
+    <script src="https://assets.teleads.pro/sdk/index.umd.js"></script>
 
     <style>
         body {
@@ -106,6 +107,15 @@
             box-sizing: border-box;
             overflow: hidden;
         }
+
+        /* Small status indicator for ad state */
+        .ad-status {
+            position: absolute;
+            bottom: 5px;
+            right: 10px;
+            font-size: 10px;
+            color: #4a5d70;
+        }
     </style>
 </head>
 <body>
@@ -130,10 +140,11 @@
     <button class="btn" id="startBtn">Start Game</button>
 
     <!-- ========================================== -->
-    <!-- ADSUN AD CONTAINER (Usually a <div> tag)   -->
+    <!-- AD CONTAINER (visual placeholder)          -->
     <!-- ========================================== -->
     <div class="ad-wrapper" id="adsun-ad-container">
-        <span style="color: #8b9eb0;">Ad Space (Waiting for Adsun)</span>
+        <span style="color: #8b9eb0;">Ad Space (TeleAds ready)</span>
+        <span class="ad-status" id="adStatus">⚡</span>
     </div>
 
     <script>
@@ -145,12 +156,115 @@
         const scoreEl = document.getElementById('score');
         const timeEl = document.getElementById('time');
         const startBtn = document.getElementById('startBtn');
+        const adStatusEl = document.getElementById('adStatus');
 
         let score = 0;
         let timeLeft = 10;
         let gameInterval;
         let isPlaying = false;
 
+        // ----- TeleAds SDK variables -----
+        // ⚠️ REPLACE WITH YOUR ACTUAL TOKENS / AD UNIT IDs
+        const SDK_TOKEN = 'YOUR_SDK_TOKEN';           // <-- paste your TeleAds SDK token
+        const REWARDED_AD_UNIT_ID = 'YOUR_REWARDED_AD_UNIT_ID';   // <-- paste rewarded ad unit ID
+        const INTERSTITIAL_AD_UNIT_ID = 'YOUR_INTERSTITIAL_AD_UNIT_ID'; // <-- paste interstitial ad unit ID
+
+        // Helper to update ad status text
+        function setAdStatus(text) {
+            if (adStatusEl) adStatusEl.textContent = text;
+        }
+
+        // ----- Initialize TeleAds SDK -----
+        (function initTeleAds() {
+            if (typeof TeleAdsTMA === 'undefined') {
+                console.warn('TeleAds SDK not loaded (check script URL)');
+                setAdStatus('SDK missing');
+                return;
+            }
+
+            try {
+                TeleAdsTMA.init({
+                    token: SDK_TOKEN,
+                    debug: true,
+                    onInitiated: () => {
+                        console.log('✅ TeleAds SDK initiated!');
+                        setAdStatus('Ready');
+                    },
+                    onError: (error) => {
+                        console.error('TeleAds SDK error:', error);
+                        setAdStatus('Init error');
+                    }
+                });
+            } catch (e) {
+                console.error('TeleAds init failed:', e);
+                setAdStatus('Init fail');
+            }
+        })();
+
+        // ----- Show interstitial ad (e.g., on game start) -----
+        function showInterstitialAd() {
+            if (typeof TeleAdsTMA === 'undefined' || !TeleAdsTMA.showAd) {
+                console.warn('TeleAds not ready for interstitial');
+                return;
+            }
+            setAdStatus('Interstitial...');
+            TeleAdsTMA.showAd({
+                adUnitId: INTERSTITIAL_AD_UNIT_ID,
+                onAdLoaded: () => console.log('Interstitial ad loaded'),
+                onTimeUpdated: ({ percent, currentTime }) => {
+                    // Optional: log time
+                },
+                onClick: () => console.log('Interstitial ad clicked'),
+            })
+            .then(() => {
+                console.log('Interstitial completed');
+                setAdStatus('Ready');
+            })
+            .catch((err) => {
+                console.warn('Interstitial failed:', err);
+                setAdStatus('Ad error');
+            });
+        }
+
+        // ----- Show rewarded ad (e.g., after game ends, optional double reward) -----
+        function showRewardedAd() {
+            if (typeof TeleAdsTMA === 'undefined' || !TeleAdsTMA.showAd) {
+                console.warn('TeleAds not ready for rewarded');
+                return;
+            }
+            setAdStatus('Rewarded...');
+            TeleAdsTMA.showAd({
+                adUnitId: REWARDED_AD_UNIT_ID,
+                onAdLoaded: () => console.log('Rewarded ad loaded'),
+                onTimeUpdated: ({ percent, currentTime }) => {
+                    // Optional: update UI
+                },
+                onClick: () => console.log('Rewarded ad clicked'),
+            })
+            .then(() => {
+                console.log('Rewarded completed — user should be rewarded!');
+                setAdStatus('Reward granted');
+                // Here you can grant an extra reward (e.g., +5 score or bonus time)
+                // For demo, we just show a small notification
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                // Optional: Add a tiny bonus to score (demo)
+                // score += 2; scoreEl.innerText = score;
+            })
+            .catch((err) => {
+                console.warn('Rewarded failed:', err);
+                setAdStatus('Ad error');
+            });
+        }
+
+        // ----- Abort any ad (not strictly needed here but exposed) -----
+        function abortAd() {
+            if (typeof TeleAdsTMA !== 'undefined' && TeleAdsTMA.abort) {
+                TeleAdsTMA.abort();
+                setAdStatus('Aborted');
+            }
+        }
+
+        // ----- GAME FUNCTIONS -----
         function moveTarget() {
             const areaRect = gameArea.getBoundingClientRect();
             const targetSize = 80; 
@@ -169,6 +283,9 @@
         }
 
         function startGame() {
+            // Show interstitial ad when starting a new game (optional)
+            showInterstitialAd();
+
             score = 0;
             timeLeft = 10;
             isPlaying = true;
@@ -179,6 +296,8 @@
             target.classList.remove('hidden');
             moveTarget();
 
+            // Clear any previous interval
+            if (gameInterval) clearInterval(gameInterval);
             gameInterval = setInterval(() => {
                 timeLeft--;
                 timeEl.innerText = timeLeft;
@@ -193,18 +312,21 @@
             startBtn.innerText = `Play Again (Score: ${score})`;
             startBtn.style.display = 'block';
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+
+            // Show rewarded ad after game ends (optional) — reward for playing
+            // You could conditionally offer it if score > X, but here we always show it
+            // so the user can get an extra reward.
+            showRewardedAd();
         }
 
         target.addEventListener('pointerdown', handleTargetClick);
         startBtn.addEventListener('click', startGame);
 
+        // Optional: expose abort function globally for debugging
+        window.abortTeleAds = abortAd;
 
-        /* ==========================================
-           ADSUN AD INTEGRATION JAVASCRIPT
-           ==========================================
-           PASTE YOUR ADSUN JAVASCRIPT CODE HERE.
-           Make sure it targets the ID "adsun-ad-container"
-        */
+        // Log that ad integration is ready
+        console.log('TeleAds integration loaded (rewarded + interstitial)');
     </script>
 </body>
 </html>
