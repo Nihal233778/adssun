@@ -50,22 +50,20 @@
 
     <div class="ad-wrapper" id="adsun-ad-container">
         <span id="adText" style="color: #8b9eb0;">Ad Space (Waiting...)</span>
-        <button class="test-btn" onclick="showRewardedAd()">Force Show Ad</button>
+        <button class="test-btn" onclick="window.showRewardedAd()">Force Show Ad</button>
     </div>
 
     <script>
-        // Wait until the HTML is fully loaded before running any code
+        // WE WAIT FOR THE HTML TO LOAD FIRST
         document.addEventListener('DOMContentLoaded', () => {
-            /* ==========================================
-               DEBUGGING LOGIC
-               ========================================== */
+            
             const adTextEl = document.getElementById('adText');
 
-            // REPLACE THIS WITH YOUR FULL SDK TOKEN (no dots)
+            // ⚠️ PASTE YOUR FULL TOKEN HERE (No dots!)
             const SDK_TOKEN = '58e2ce620254e49ae915607cc51454d6cd4aa598';
             const AD_UNIT_ID_1 = '1310';
 
-            // 1. Check if SDK loaded
+            // Initialize SDK
             if (typeof TeleAdsTMA === 'undefined') {
                 adTextEl.innerHTML = "<span style='color:red'>Error: SDK script didn't load!</span>";
             } else {
@@ -86,6 +84,7 @@
                 }
             }
 
+            // Define Ad Function Globally
             window.showRewardedAd = function() {
                 if (typeof TeleAdsTMA === 'undefined') return;
                 adTextEl.innerText = "Requesting ad from server...";
@@ -107,9 +106,7 @@
                 }
             };
 
-            /* ==========================================
-               GAME LOGIC
-               ========================================== */
+            // Game Logic
             const target = document.getElementById('target');
             const gameArea = document.getElementById('gameArea');
             const scoreEl = document.getElementById('score');
