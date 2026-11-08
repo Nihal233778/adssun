@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Target Tapper Debug</title>
+    <title>Target Tapper</title>
     
     <!-- Telegram WebApp Script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -54,107 +54,104 @@
     </div>
 
     <script>
-        /* ==========================================
-           DEBUGGING LOGIC
-           ========================================== */
-        const adTextEl = document.getElementById('adText');
+        // Wait until the HTML is fully loaded before running any code
+        document.addEventListener('DOMContentLoaded', () => {
+            /* ==========================================
+               DEBUGGING LOGIC
+               ========================================== */
+            const adTextEl = document.getElementById('adText');
 
-        // USING YOUR REAL IDs
-        const SDK_TOKEN = '58e2ce620254e49ae915607cc51454d6cd4aa598'; // MAKE SURE NO DOTS (...)
-        const AD_UNIT_ID_1 = '1310';
+            // REPLACE THIS WITH YOUR FULL SDK TOKEN (no dots)
+            const SDK_TOKEN = 'PASTE_YOUR_FULL_TOKEN_HERE'; 
+            const AD_UNIT_ID_1 = '1310';
 
-        // 1. Check if SDK loaded from the internet
-        if (typeof TeleAdsTMA === 'undefined') {
-            adTextEl.innerHTML = "<span style='color:red'>Error: SDK script didn't load!</span>";
-        } else {
-            adTextEl.innerHTML = "SDK Loaded. Initializing...";
-
-            // 2. Try to initialize
-            try {
-                TeleAdsTMA.init({
-                    token: SDK_TOKEN,
-                    debug: true,
-                    onInitiated: () => {
-                        adTextEl.innerHTML = "<span style='color:green'>SDK Init Success! Ready.</span>";
-                    },
-                    onError: (error) => {
-                        adTextEl.innerHTML = "<span style='color:red'>Init Error: " + (error.message || error) + "</span>";
-                    }
-                });
-            } catch (err) {
-                adTextEl.innerHTML = "<span style='color:red'>Crash on Init: " + err.message + "</span>";
-            }
-        }
-
-        function showRewardedAd() {
-            if (typeof TeleAdsTMA === 'undefined') return;
-            
-            adTextEl.innerText = "Requesting ad from server...";
-
-            try {
-                TeleAdsTMA.showAd({
-                    adUnitId: AD_UNIT_ID_1,
-                    onAdLoaded: () => {
-                        adTextEl.innerText = "AD IS PLAYING NOW!";
-                    }
-                })
-                .then(() => {
-                    adTextEl.innerText = "Ad Completed Successfully!";
-                })
-                .catch((err) => {
-                    // This will show the EXACT reason it failed
-                    adTextEl.innerHTML = "<span style='color:red'>Ad Failed: " + (err.message || JSON.stringify(err)) + "</span>";
-                });
-            } catch (err) {
-                adTextEl.innerHTML = "<span style='color:red'>Crash on ShowAd: " + err.message + "</span>";
-            }
-        }
-
-        /* ==========================================
-           GAME LOGIC (Simplified for testing)
-           ========================================== */
-        const target = document.getElementById('target');
-        const gameArea = document.getElementById('gameArea');
-        const scoreEl = document.getElementById('score');
-        const timeEl = document.getElementById('time');
-        const startBtn = document.getElementById('startBtn');
-
-        let score = 0;
-        let timeLeft = 10;
-        let gameInterval;
-
-        function moveTarget() {
-            const maxX = gameArea.getBoundingClientRect().width - 80;
-            const maxY = gameArea.getBoundingClientRect().height - 80;
-            target.style.left = `${Math.floor(Math.random() * maxX)}px`;
-            target.style.top = `${Math.floor(Math.random() * maxY)}px`;
-        }
-
-        target.addEventListener('pointerdown', () => {
-            score++;
-            scoreEl.innerText = score;
-            moveTarget();
-        });
-
-        startBtn.addEventListener('click', () => {
-            score = 0; timeLeft = 10;
-            scoreEl.innerText = score; timeEl.innerText = timeLeft;
-            startBtn.style.display = 'none';
-            target.style.display = 'block';
-            moveTarget();
-
-            gameInterval = setInterval(() => {
-                timeLeft--;
-                timeEl.innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(gameInterval);
-                    target.style.display = 'none';
-                    startBtn.style.display = 'block';
-                    startBtn.innerText = "Play Again";
-                    // Trigger ad automatically after game over
-                    showRewardedAd(); 
+            // 1. Check if SDK loaded
+            if (typeof TeleAdsTMA === 'undefined') {
+                adTextEl.innerHTML = "<span style='color:red'>Error: SDK script didn't load!</span>";
+            } else {
+                adTextEl.innerHTML = "SDK Loaded. Initializing...";
+                try {
+                    TeleAdsTMA.init({
+                        token: SDK_TOKEN,
+                        debug: true,
+                        onInitiated: () => {
+                            adTextEl.innerHTML = "<span style='color:green'>SDK Init Success! Ready.</span>";
+                        },
+                        onError: (error) => {
+                            adTextEl.innerHTML = "<span style='color:red'>Init Error: " + (error.message || error) + "</span>";
+                        }
+                    });
+                } catch (err) {
+                    adTextEl.innerHTML = "<span style='color:red'>Crash on Init: " + err.message + "</span>";
                 }
-            }, 1000);
+            }
+
+            window.showRewardedAd = function() {
+                if (typeof TeleAdsTMA === 'undefined') return;
+                adTextEl.innerText = "Requesting ad from server...";
+                try {
+                    TeleAdsTMA.showAd({
+                        adUnitId: AD_UNIT_ID_1,
+                        onAdLoaded: () => {
+                            adTextEl.innerText = "AD IS PLAYING NOW!";
+                        }
+                    })
+                    .then(() => {
+                        adTextEl.innerText = "Ad Completed Successfully!";
+                    })
+                    .catch((err) => {
+                        adTextEl.innerHTML = "<span style='color:red'>Ad Failed: " + (err.message || JSON.stringify(err)) + "</span>";
+                    });
+                } catch (err) {
+                    adTextEl.innerHTML = "<span style='color:red'>Crash on ShowAd: " + err.message + "</span>";
+                }
+            };
+
+            /* ==========================================
+               GAME LOGIC
+               ========================================== */
+            const target = document.getElementById('target');
+            const gameArea = document.getElementById('gameArea');
+            const scoreEl = document.getElementById('score');
+            const timeEl = document.getElementById('time');
+            const startBtn = document.getElementById('startBtn');
+
+            let score = 0;
+            let timeLeft = 10;
+            let gameInterval;
+
+            function moveTarget() {
+                const maxX = gameArea.getBoundingClientRect().width - 80;
+                const maxY = gameArea.getBoundingClientRect().height - 80;
+                target.style.left = `${Math.floor(Math.random() * maxX)}px`;
+                target.style.top = `${Math.floor(Math.random() * maxY)}px`;
+            }
+
+            target.addEventListener('pointerdown', () => {
+                score++;
+                scoreEl.innerText = score;
+                moveTarget();
+            });
+
+            startBtn.addEventListener('click', () => {
+                score = 0; timeLeft = 10;
+                scoreEl.innerText = score; timeEl.innerText = timeLeft;
+                startBtn.style.display = 'none';
+                target.style.display = 'block';
+                moveTarget();
+
+                gameInterval = setInterval(() => {
+                    timeLeft--;
+                    timeEl.innerText = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(gameInterval);
+                        target.style.display = 'none';
+                        startBtn.style.display = 'block';
+                        startBtn.innerText = "Play Again";
+                        window.showRewardedAd(); 
+                    }
+                }, 1000);
+            });
         });
     </script>
 </body>
